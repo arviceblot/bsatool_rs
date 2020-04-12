@@ -53,3 +53,5 @@ Temporary Items
 *.nif
 *.kf
 *.[vp]so
+
+target/
