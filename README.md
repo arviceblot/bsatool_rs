@@ -1,5 +1,7 @@
 # bsatool_rs
 
+[![Build Status](https://travis-ci.org/arviceblot/bsatool_rs.svg?branch=master)](https://travis-ci.org/arviceblot/bsatool_rs)
+
 A rust implementation of the openmw bsatool.
 
 ## Command line options
