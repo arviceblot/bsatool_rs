@@ -1,0 +1,132 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bsatool_rs'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bsatool_rs",
+                    "--package=bsatool_rs"
+                ],
+                "filter": {
+                    "name": "bsatool_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bsatool_rs list with data",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bsatool_rs",
+                    "--package=bsatool_rs"
+                ],
+                "filter": {
+                    "name": "bsatool_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "test_data/Morrowind.bsa",
+                "list"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bsatool_rs extractall with data",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bsatool_rs",
+                    "--package=bsatool_rs"
+                ],
+                "filter": {
+                    "name": "bsatool_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "test_data/Morrowind.bsa",
+                "extractall",
+                "test_output/"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bsatool_rs extract with data",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bsatool_rs",
+                    "--package=bsatool_rs"
+                ],
+                "filter": {
+                    "name": "bsatool_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "test_data/Morrowind.bsa",
+                "extract",
+                "textures\\vfx_poison03.dds",
+                "test_single/"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bsatool_rs extract full-path with data",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bsatool_rs",
+                    "--package=bsatool_rs"
+                ],
+                "filter": {
+                    "name": "bsatool_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "test_data/Morrowind.bsa",
+                "extract",
+                "-f",
+                "textures\\vfx_poison03.dds",
+                "test_single/"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bsatool_rs'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bsatool_rs",
+                    "--package=bsatool_rs"
+                ],
+                "filter": {
+                    "name": "bsatool_rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

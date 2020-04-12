@@ -1,0 +1,18 @@
+[package]
+name = "bsatool_rs"
+version = "0.1.0"
+authors = ["arviceblot <logan@arviceblot.com>"]
+license = "GPL-3.0"
+description = "A tool work with BSA files"
+readme = "README.md"
+homepage = "https://github.com/arviceblot/bsatool_rs"
+repository = "https://github.com/arviceblot/bsatool_rs"
+keywords = ["cli", "archive", "morrowind"]
+categories = ["command-line-utilities"]
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "2.27.1" # from crates.io
+indicatif = "0.14.0"
