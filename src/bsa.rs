@@ -41,9 +41,9 @@ impl BSAFile {
         let fs = &self.files[i as usize];
 
         let mut file = File::open(&self.filename).unwrap();
-        file.seek(SeekFrom::Start(fs.offset as u64));
+        file.seek(SeekFrom::Start(fs.offset as u64)).unwrap();
         let mut buf = vec![0u8; fs.file_size as usize];
-        file.read_exact(&mut buf);
+        file.read_exact(&mut buf).unwrap();
         buf
     }
     pub fn get_list(&self) -> &FileList {
@@ -64,7 +64,7 @@ Archive: {}",
 
         // Total archive size
         let fsize = file.seek(SeekFrom::End(0)).unwrap();
-        file.seek(SeekFrom::Start(0));
+        file.seek(SeekFrom::Start(0)).unwrap();
         if fsize < 12 {
             self.fail("File too small to be a valid BSA archive".to_string())
         }
