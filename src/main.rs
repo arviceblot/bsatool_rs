@@ -36,9 +36,7 @@ impl Arguments {
 fn parse_options() -> Arguments {
     let mut info = Arguments::new();
 
-    let matches = App::new("bsatool")
-        .version("0.1.0")
-        .author("arviceblot <logan@arviceblot.com>")
+    let matches = App::new("bsatool_rs")
         .about("Inspect and extract files from Bethesda BSA archives")
         .arg(
             Arg::with_name("INPUT")
@@ -142,7 +140,6 @@ In archive: {}",
     }
 
     // Get a buffer for the file to extract
-    // (inefficient because get_file iter on the list again)
     let data = bsa.get_file(archive_path.to_string());
 
     // Write the file to disk
@@ -180,7 +177,6 @@ fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
         }
 
         // Get a buffer for the file to extract
-        // (inefficient because get_file iter on the list again)
         let data = bsa.get_file(file.name.to_string());
 
         // Write the file to disk

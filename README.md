@@ -6,8 +6,7 @@ A rust implementation of the openmw bsatool.
 
 ## Command line options
 
-    bsatool 0.1.0
-    arviceblot <logan@arviceblot.com>
+    bsatool_rs
     Inspect and extract files from Bethesda BSA archives
 
     USAGE:

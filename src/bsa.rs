@@ -145,8 +145,10 @@ Archive: {}",
     }
     // Get the index of a given file name, or -1 if not found
     fn get_index(&self, file: String) -> i32 {
-        let i = self.files.iter().position(|x| x.name == file).unwrap();
-        i as i32
+        match self.lookup.get(&file) {
+            Some(&index) => index as i32,
+            _ => -1,
+        }
     }
 }
 
