@@ -16,8 +16,8 @@ pub struct BSAFile {
 pub type FileList = Vec<FileStruct>;
 
 fn calculate_hash(name: &String) -> u64 {
-    // let lower_name = name.to_lowercase();
-    // let midpoint = lower_name.len() >> 1;
+    // let lower_name = name.to_ascii_lowercase();
+    // let midpoint = lower_name.chars().count() >> 1;
     // let mut low = [0u8; 4];
     // let mut i = 0;
     // while i < midpoint {
@@ -27,14 +27,14 @@ fn calculate_hash(name: &String) -> u64 {
 
     // let mut high = 0b00000000;
     // while i < name.len() {
-    //     let temp = name.as_bytes()[i] << (((i - midpoint) & 3) << 3);
+    //     let temp = (name.as_bytes()[i] as u32) << (((i - midpoint) & 3) << 3);
     //     let bits = temp & 0x1F;
     //     high ^= temp;
     //     high = high << (32 - bits) | high >> bits;
     //     i += 1;
     // }
-    // u32::from_le_bytes(low) | (high << 32) as u32
-    0 as u64
+    // u32::from_le_bytes(low) as u64 | (high as u64) << 32
+    0
 }
 
 impl BSAFile {

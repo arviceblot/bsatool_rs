@@ -20,6 +20,7 @@ A rust implementation of the openmw bsatool.
         <INPUT>    The input archive file to use
 
     SUBCOMMANDS:
+        create        Create an archive file
         extract       Extract a file from the input archive
         extractall    Extract all files from the input archive
         help          Prints this message or the help of the given subcommand(s)
