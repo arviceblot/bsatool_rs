@@ -15,6 +15,7 @@ struct Arguments {
     filename: String,
     extractfile: String,
     outdir: String,
+    filenames: Vec<String>,
 
     longformat: bool,
     fullpath: bool,
@@ -29,6 +30,7 @@ impl Arguments {
             outdir: String::from("."),
             longformat: false,
             fullpath: false,
+            filenames: vec![],
         }
     }
 }
@@ -69,6 +71,13 @@ fn parse_options() -> Arguments {
                 .about("Extract all files from the input archive")
                 .arg(Arg::with_name("output_directory")),
         )
+        .subcommand(
+            SubCommand::with_name("create")
+                .about("Create an archive file")
+                .arg(Arg::with_name("files")
+                        .takes_value(true)
+                        .multiple(true)),
+        )
         .get_matches();
 
     info.filename = matches.value_of("INPUT").unwrap().to_string();
@@ -93,6 +102,13 @@ fn parse_options() -> Arguments {
             .value_of("output_directory")
             .unwrap_or(".")
             .to_string();
+    } else if let Some(matches) = matches.subcommand_matches("create") {
+        info.mode = String::from("create");
+        info.filenames = matches
+            .values_of("files")
+            .unwrap()
+            .map(|x| x.to_string())
+            .collect();
     }
     info
 }
@@ -188,17 +204,25 @@ fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
     pb.finish_with_message("done");
 }
 
+fn create(bsa: &mut bsa::BSAFile, info: &Arguments) {
+    bsa.create(&info.filename, &info.filenames);
+}
+
 fn main() {
     let info = parse_options();
 
     // Open file
     let mut bsa: bsa::BSAFile = bsa::BSAFile::new();
-    bsa.open(info.filename.to_string());
+    if ["list", "extract", "extractall"].contains(&info.mode.as_str()) {
+        // read header
+        bsa.open(info.filename.to_string());
+    }
 
     match info.mode.as_str() {
         "list" => list(&bsa, &info),
         "extract" => extract(&bsa, &info),
         "extractall" => extractall(&bsa, &info),
+        "create" => create(&mut bsa, &info),
         _ => println!("Unsupported mode. That is not supposed to happen."),
     }
 }
