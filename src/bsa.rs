@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::str;
 
 pub struct BSAFile {
@@ -62,7 +62,7 @@ impl BSAFile {
         let i = self.get_index(file.to_string());
         if i == -1 {
             let msg = format!("File not found: {}", file.to_string());
-            self.fail(msg);
+            self.fail(msg.as_str());
         }
         let fs = &self.files[i as usize];
 
@@ -77,7 +77,7 @@ impl BSAFile {
         &self.files
     }
 
-    fn fail(&self, msg: String) {
+    fn fail(&self, msg: &str) {
         panic!(
             "BSA Error: {}
 Archive: {}",
@@ -94,7 +94,7 @@ Archive: {}",
         let fsize = file.seek(SeekFrom::End(0)).unwrap();
         file.seek(SeekFrom::Start(0)).unwrap();
         if fsize < 12 {
-            self.fail("File too small to be a valid BSA archive".to_string())
+            self.fail("File too small to be a valid BSA archive")
         }
 
         // Get essential header numbers
@@ -106,7 +106,7 @@ Archive: {}",
             file.read(&mut buff).unwrap();
 
             if buff[..4] != *BSAFile::MAGIC_HEADER {
-                self.fail("Unrecognized BSA header".to_string())
+                self.fail("Unrecognized BSA header")
             }
 
             // Total number of bytes used in size/offset-table + filename
@@ -125,7 +125,7 @@ Archive: {}",
         if (filenum as u64 * 21 > (fsize - 12))
             || (dirsize as u64 + 8 * filenum as u64 > (fsize - 12))
         {
-            self.fail("Directory information larger than entire archive".to_string());
+            self.fail("Directory information larger than entire archive");
         }
 
         // Read the offset info into a temporary buffer
@@ -161,7 +161,7 @@ Archive: {}",
             };
 
             if fs.offset as u64 + fs.file_size as u64 > fsize {
-                self.fail("Archive contains offsets outside itself".to_string())
+                self.fail("Archive contains offsets outside itself")
             }
             self.lookup.insert(fs.name.to_string(), i);
             self.files.push(fs);
