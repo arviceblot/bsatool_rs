@@ -1,5 +1,6 @@
 # bsatool_rs
 
+[![](http://meritbadge.herokuapp.com/bsatool_rs)](https://crates.io/crates/bsatool_rs)
 [![Build Status](https://travis-ci.org/arviceblot/bsatool_rs.svg?branch=master)](https://travis-ci.org/arviceblot/bsatool_rs)
 
 A rust implementation of the openmw bsatool.
