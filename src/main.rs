@@ -125,15 +125,14 @@ fn list(bsa: &bsa::BSAFile, info: &Arguments) {
 }
 
 fn extract(bsa: &bsa::BSAFile, info: &Arguments) {
-    let archive_path = &info.extractfile.to_string().replace("/", "\\");
-    let extract_path = &info.extractfile.to_string().replace("\\", "/");
+    let archive_path = &info.extractfile.replace("/", "\\");
+    let extract_path = &info.extractfile.replace("\\", "/");
 
-    if !bsa.exists(archive_path.to_string()) {
+    if !bsa.exists(&archive_path) {
         panic!(
             "ERROR: file '{}' not found
 In archive: {}",
-            info.extractfile.to_string(),
-            info.filename.to_string()
+            info.extractfile, info.filename
         )
     }
 
@@ -156,13 +155,13 @@ In archive: {}",
     }
 
     // Get a buffer for the file to extract
-    let data = bsa.get_file(archive_path.to_string());
+    let data = bsa.get_file(archive_path);
 
     // Write the file to disk
     println!(
         "Extracting {} to {}",
-        info.extractfile.to_string(),
-        target.to_str().unwrap().to_string()
+        info.extractfile,
+        target.to_str().unwrap()
     );
     let f = File::create(target).expect("Unable to create file");
     let mut f = BufWriter::new(f);
@@ -177,10 +176,10 @@ fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
 
     for file in list {
         pb.inc(1);
-        let extract_path = file.name.to_string().replace("\\", "/");
+        let extract_path = file.name.replace("\\", "/");
 
         // Get the target path (the path the file will be extracted to)
-        let target = Path::new(&info.outdir).join(extract_path.to_string());
+        let target = Path::new(&info.outdir).join(extract_path);
 
         // Create the directory hierarchy
         fs::create_dir_all(target.parent().unwrap()).unwrap();
@@ -193,7 +192,7 @@ fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
         }
 
         // Get a buffer for the file to extract
-        let data = bsa.get_file(file.name.to_string());
+        let data = bsa.get_file(&file.name);
 
         // Write the file to disk
         let f = File::create(target).expect("Unable to create file");

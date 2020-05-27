@@ -15,7 +15,7 @@ pub struct BSAFile {
 
 pub type FileList = Vec<FileStruct>;
 
-fn calculate_hash(name: &String) -> u64 {
+fn calculate_hash(_name: &String) -> u64 {
     // let lower_name = name.to_ascii_lowercase();
     // let midpoint = lower_name.chars().count() >> 1;
     // let mut low = [0u8; 4];
@@ -54,14 +54,14 @@ impl BSAFile {
         self.read_header()
     }
 
-    pub fn exists(&self, file: String) -> bool {
+    pub fn exists(&self, file: &String) -> bool {
         self.get_index(file) != -1
     }
 
-    pub fn get_file(&self, file: String) -> Vec<u8> {
-        let i = self.get_index(file.to_string());
+    pub fn get_file(&self, file: &String) -> Vec<u8> {
+        let i = self.get_index(file);
         if i == -1 {
-            let msg = format!("File not found: {}", file.to_string());
+            let msg = format!("File not found: {}", file);
             self.fail(msg.as_str());
         }
         let fs = &self.files[i as usize];
@@ -266,8 +266,8 @@ Archive: {}",
     }
 
     // Get the index of a given file name, or -1 if not found
-    fn get_index(&self, file: String) -> i32 {
-        match self.lookup.get(&file) {
+    fn get_index(&self, file: &String) -> i32 {
+        match self.lookup.get(file) {
             Some(&index) => index as i32,
             _ => -1,
         }
