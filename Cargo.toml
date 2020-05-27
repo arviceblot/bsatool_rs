@@ -1,6 +1,6 @@
 [package]
 name = "bsatool_rs"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["arviceblot <logan@arviceblot.com>"]
 license = "GPL-3.0"
 description = "A tool work with BSA files"

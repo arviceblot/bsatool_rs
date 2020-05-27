@@ -5,6 +5,21 @@
 
 A rust implementation of the openmw bsatool.
 
+## Install
+
+The easiest way right now is to install with [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html):
+
+```
+cargo install bsatool_rs
+```
+
+or download the source code and compile it:
+
+```
+git clone git@github.com:arviceblot/bsatool_rs.git && cd bsatool_rs
+cargo build --release
+```
+
 ## Command line options
 
     bsatool_rs
