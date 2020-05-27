@@ -15,26 +15,33 @@ pub struct BSAFile {
 
 pub type FileList = Vec<FileStruct>;
 
-fn calculate_hash(_name: &String) -> u64 {
-    // let lower_name = name.to_ascii_lowercase();
-    // let midpoint = lower_name.chars().count() >> 1;
-    // let mut low = [0u8; 4];
-    // let mut i = 0;
-    // while i < midpoint {
-    //     low[i & 3] ^= name.as_bytes()[i];
-    //     i += 1;
-    // }
+fn calculate_hash(name: &String) -> u64 {
+    let lower_name = name.to_ascii_lowercase();
+    let characters: Vec<char> = lower_name.chars().collect();
+    let l = lower_name.chars().count() as u32 >> 1;
 
-    // let mut high = 0b00000000;
-    // while i < name.len() {
-    //     let temp = (name.as_bytes()[i] as u32) << (((i - midpoint) & 3) << 3);
-    //     let bits = temp & 0x1F;
-    //     high ^= temp;
-    //     high = high << (32 - bits) | high >> bits;
-    //     i += 1;
-    // }
-    // u32::from_le_bytes(low) as u64 | (high as u64) << 32
-    0
+    let (mut sum, mut off): (u32, u32) = (0, 0);
+    for (i, c) in characters.iter().enumerate() {
+        if i as u32 >= l {
+            break;
+        }
+        sum ^= (*c as u32) << (off & 0x1F);
+        off += 8;
+    }
+    let low = sum;
+
+    let mut sum: u64 = 0;
+    off = 0;
+    let (mut temp, mut n);
+    for c in characters.iter() {
+        temp = (*c as u32) << (off & 0x1F);
+        sum ^= temp as u64;
+        n = temp & 0x1F;
+        sum = (sum << (32 - n)) | (sum >> n); // binary "rotate right"
+        off += 8;
+    }
+    let high = sum;
+    (low as u64) | ((high as u64) << 32)
 }
 
 impl BSAFile {
