@@ -16,4 +16,4 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 clap = "2.27.1" # from crates.io
-indicatif = "0.15.0"
+indicatif = "0.16.0"
