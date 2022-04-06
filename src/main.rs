@@ -125,10 +125,10 @@ fn list(bsa: &bsa::BSAFile, info: &Arguments) {
 }
 
 fn extract(bsa: &bsa::BSAFile, info: &Arguments) {
-    let archive_path = &info.extractfile.replace("/", "\\");
-    let extract_path = &info.extractfile.replace("\\", "/");
+    let archive_path = &info.extractfile.replace('/', "\\");
+    let extract_path = &info.extractfile.replace('\\', "/");
 
-    if !bsa.exists(&archive_path) {
+    if !bsa.exists(archive_path) {
         panic!(
             "ERROR: file '{}' not found
 In archive: {}",
@@ -176,7 +176,7 @@ fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
 
     for file in list {
         pb.inc(1);
-        let extract_path = file.name.replace("\\", "/");
+        let extract_path = file.name.replace('\\', "/");
 
         // Get the target path (the path the file will be extracted to)
         let target = Path::new(&info.outdir).join(extract_path);

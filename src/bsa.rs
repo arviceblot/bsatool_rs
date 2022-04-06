@@ -15,7 +15,7 @@ pub struct BSAFile {
 
 pub type FileList = Vec<FileStruct>;
 
-fn calculate_hash(name: &String) -> u64 {
+fn calculate_hash(name: &str) -> u64 {
     let lower_name = name.to_ascii_lowercase();
     let characters: Vec<char> = lower_name.chars().collect();
     let l = lower_name.chars().count() as u32 >> 1;
@@ -61,11 +61,11 @@ impl BSAFile {
         self.read_header()
     }
 
-    pub fn exists(&self, file: &String) -> bool {
+    pub fn exists(&self, file: &str) -> bool {
         self.get_index(file) != -1
     }
 
-    pub fn get_file(&self, file: &String) -> Vec<u8> {
+    pub fn get_file(&self, file: &str) -> Vec<u8> {
         let i = self.get_index(file);
         if i == -1 {
             let msg = format!("File not found: {}", file);
@@ -93,7 +93,7 @@ Archive: {}",
     }
 
     fn read_header(&mut self) {
-        assert_eq!(self.is_loaded, false);
+        assert!(self.is_loaded == false, "BSA file already loaded");
 
         let mut file = File::open(&self.filename).unwrap();
 
@@ -110,7 +110,7 @@ Archive: {}",
         {
             // First 12 bytes
             let mut buff = [0u8; 4];
-            file.read(&mut buff).unwrap();
+            file.read_exact(&mut buff).unwrap();
 
             if buff[..4] != *BSAFile::MAGIC_HEADER {
                 self.fail("Unrecognized BSA header")
@@ -118,11 +118,11 @@ Archive: {}",
 
             // Total number of bytes used in size/offset-table + filename
             // sections. AKA hashOffset.
-            file.read(&mut buff).unwrap();
+            file.read_exact(&mut buff).unwrap();
             dirsize = u32::from_le_bytes(buff);
 
             // Number of files
-            file.read(&mut buff).unwrap();
+            file.read_exact(&mut buff).unwrap();
             filenum = u32::from_le_bytes(buff);
         }
 
@@ -139,13 +139,13 @@ Archive: {}",
         let mut offsets: Vec<u32> = vec![0; 3 * filenum as usize];
         for i in 0..3 * filenum {
             let mut buff = [0u8; 4];
-            file.read(&mut buff).unwrap();
+            file.read_exact(&mut buff).unwrap();
             offsets[i as usize] = u32::from_le_bytes(buff);
         }
 
         // Read the string table
         let mut buff: Vec<u8> = vec![0; dirsize as usize - 12 * filenum as usize]; //dirsize as usize - 12 * filenum as usize];
-        file.read(&mut buff).unwrap();
+        file.read_exact(&mut buff).unwrap();
         let string_buf = String::from_utf8(buff).unwrap();
         let string_vec = string_buf.split('\0').collect::<Vec<&str>>();
 
@@ -177,8 +177,8 @@ Archive: {}",
         self.is_loaded = true;
     }
 
-    pub fn create(&mut self, file: &String, filenames: &Vec<String>) {
-        assert_eq!(self.is_loaded, false);
+    pub fn create(&mut self, file: &str, filenames: &[String]) {
+        assert!(self.is_loaded == false, "BSA file already loaded");
         self.filename = file.to_string();
 
         // track bytes written
@@ -188,7 +188,7 @@ Archive: {}",
         // get all file sizes
         let mut total_files_size: u32 = 0;
         for (i, filename) in filenames.iter().enumerate() {
-            let archive_path = filename.to_ascii_lowercase().replace("/", "\\");
+            let archive_path = filename.to_ascii_lowercase().replace('/', "\\");
             let metadata = fs::metadata(filename).unwrap();
             let fsize = metadata.len();
             // check size
@@ -242,7 +242,7 @@ Archive: {}",
         assert_eq!(bytes_written, 12 + 12 * filenum);
 
         // write filesnames
-        let null_term = ['\0' as u8];
+        let null_term = [b'\0'];
         for file in &self.files {
             bytes_written += f.write(file.name.as_bytes()).unwrap() as u32;
             bytes_written += f.write(&null_term).unwrap() as u32;
@@ -273,7 +273,7 @@ Archive: {}",
     }
 
     // Get the index of a given file name, or -1 if not found
-    fn get_index(&self, file: &String) -> i32 {
+    fn get_index(&self, file: &str) -> i32 {
         match self.lookup.get(file) {
             Some(&index) => index as i32,
             _ => -1,
