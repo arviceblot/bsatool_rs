@@ -1,6 +1,6 @@
 extern crate clap;
 extern crate indicatif;
-use clap::{App, Arg, SubCommand};
+use clap::{Arg, Command};
 use indicatif::ProgressBar;
 
 use std::fs;
@@ -38,45 +38,41 @@ impl Arguments {
 fn parse_options() -> Arguments {
     let mut info = Arguments::new();
 
-    let matches = App::new("bsatool_rs")
+    let matches = Command::new("bsatool_rs")
         .about("Inspect and extract files from Bethesda BSA archives")
         .arg(
-            Arg::with_name("INPUT")
+            Arg::new("INPUT")
                 .required(true)
                 .help("The input archive file to use"),
         )
         .subcommand(
-            SubCommand::with_name("list")
+            Command::new("list")
                 .about("List the files presents in the input archive")
                 .arg(
-                    Arg::with_name("long")
-                        .short("l")
+                    Arg::new("long")
+                        .short('l')
                         .long("long")
                         .help("Include extra information in archive listing"),
                 ),
         )
         .subcommand(
-            SubCommand::with_name("extract")
+            Command::new("extract")
                 .about("Extract a file from the input archive")
-                .arg(Arg::with_name("full-path")
-                    .short("f")
-                    .long("full-path")
-                    .help("Create directory hierarchy on file extraction (always true for extractall)",
+                .arg(Arg::new("full-path").short('f').long("full-path").help(
+                    "Create directory hierarchy on file extraction (always true for extractall)",
                 ))
-                .arg(Arg::with_name("file_to_extract"))
-                .arg(Arg::with_name("output_directory")),
+                .arg(Arg::new("file_to_extract"))
+                .arg(Arg::new("output_directory")),
         )
         .subcommand(
-            SubCommand::with_name("extractall")
+            Command::new("extractall")
                 .about("Extract all files from the input archive")
-                .arg(Arg::with_name("output_directory")),
+                .arg(Arg::new("output_directory")),
         )
         .subcommand(
-            SubCommand::with_name("create")
+            Command::new("create")
                 .about("Create an archive file")
-                .arg(Arg::with_name("files")
-                        .takes_value(true)
-                        .multiple(true)),
+                .arg(Arg::new("files").takes_value(true).multiple_values(true)),
         )
         .get_matches();
 
