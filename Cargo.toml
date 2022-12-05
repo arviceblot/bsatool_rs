@@ -15,5 +15,5 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = "3.1.18" # from crates.io
+clap = "4.0.29" # from crates.io
 indicatif = "0.16.0"
