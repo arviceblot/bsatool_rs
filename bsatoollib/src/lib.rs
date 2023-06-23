@@ -1,4 +1,11 @@
-/* bas.rs */
+//! A simple library to using Bethesda BSA files.
+#![warn(
+    missing_docs,
+    rust_2018_idioms,
+    missing_debug_implementations,
+    rustdoc::broken_intra_doc_links
+)]
+pub mod error; // expose for result matching
 
 use std::collections::HashMap;
 use std::fs;
@@ -6,13 +13,11 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::str;
 
-pub struct BSAFile {
-    files: FileList,
-    is_loaded: bool,
-    filename: String,
-    lookup: HashMap<String, u32>,
-}
+use error::{BsaError, Result};
 
+const MAGIC_HEADER: &[u8] = &[0x0, 0x1, 0x0, 0x0];
+
+/// Vec of FileStruct type
 pub type FileList = Vec<FileStruct>;
 
 fn calculate_hash(name: &str) -> u64 {
@@ -41,59 +46,75 @@ fn calculate_hash(name: &str) -> u64 {
         off += 8;
     }
     let high = sum;
-    (low as u64) | ((high as u64) << 32)
+    (low as u64) | (high << 32)
+}
+
+fn check_bytes_written(expected: u32, actual: u32) -> Result<()> {
+    if expected != actual {
+        return Err(BsaError::BytesWritten { expected, actual });
+    }
+    Ok(())
+}
+
+/// Helper data struct for storing info related to a file with a BSA
+#[derive(Debug)]
+pub struct FileStruct {
+    /// Expected size of the file in bytes
+    pub file_size: u32,
+    /// Offset of the file in bytes from the start of the BSA
+    pub offset: u32,
+    /// Name of the file
+    pub name: String,
+}
+
+/// Main struct for reading and manipulating BSAs
+#[derive(Debug, Default)]
+pub struct BSAFile {
+    files: FileList,
+    is_loaded: bool,
+    filename: String,
+    lookup: HashMap<String, u32>,
 }
 
 impl BSAFile {
-    const MAGIC_HEADER: &'static [u8] = &[0x0, 0x1, 0x0, 0x0];
-
-    pub fn new() -> Self {
-        Self {
-            files: Vec::new(),
-            is_loaded: false,
-            filename: String::new(),
-            lookup: HashMap::new(),
-        }
-    }
-
-    pub fn open(&mut self, file: String) {
+    /// Open a BSA file for reading
+    pub fn open(&mut self, file: String) -> Result<()> {
+        // clear out any existing file data
         self.filename = file;
+        self.files.clear();
+        self.is_loaded = false;
+        self.lookup.clear();
+
+        // read BSA header
         self.read_header()
     }
 
+    /// Check whether a given file name exists within the BSA
     pub fn exists(&self, file: &str) -> bool {
-        self.get_index(file) != -1
+        self.get_index(file).is_ok()
     }
 
-    pub fn get_file(&self, file: &str) -> Vec<u8> {
-        let i = self.get_index(file);
-        if i == -1 {
-            let msg = format!("File not found: {}", file);
-            self.fail(msg.as_str());
-        }
+    /// Get the file bytes for a given file name within the BSA
+    pub fn get_file(&self, file: &str) -> Result<Vec<u8>> {
+        let i = self.get_index(file).unwrap();
         let fs = &self.files[i as usize];
 
         let mut file = File::open(&self.filename).unwrap();
         file.seek(SeekFrom::Start(fs.offset as u64)).unwrap();
         let mut buf = vec![0u8; fs.file_size as usize];
         file.read_exact(&mut buf).unwrap();
-        buf
+        Ok(buf)
     }
 
+    /// Get the data for files with the BSA
     pub fn get_list(&self) -> &FileList {
         &self.files
     }
 
-    fn fail(&self, msg: &str) {
-        panic!(
-            "BSA Error: {}
-Archive: {}",
-            msg, self.filename
-        )
-    }
-
-    fn read_header(&mut self) {
-        assert!(self.is_loaded == false, "BSA file already loaded");
+    fn read_header(&mut self) -> Result<()> {
+        if self.is_loaded {
+            return Err(BsaError::AlreadyOpen);
+        }
 
         let mut file = File::open(&self.filename).unwrap();
 
@@ -101,7 +122,7 @@ Archive: {}",
         let fsize = file.seek(SeekFrom::End(0)).unwrap();
         file.seek(SeekFrom::Start(0)).unwrap();
         if fsize < 12 {
-            self.fail("File too small to be a valid BSA archive")
+            return Err(BsaError::TooSmall(fsize));
         }
 
         // Get essential header numbers
@@ -112,8 +133,8 @@ Archive: {}",
             let mut buff = [0u8; 4];
             file.read_exact(&mut buff).unwrap();
 
-            if buff[..4] != *BSAFile::MAGIC_HEADER {
-                self.fail("Unrecognized BSA header")
+            if buff[..4] != *MAGIC_HEADER {
+                return Err(BsaError::BadHeader);
             }
 
             // Total number of bytes used in size/offset-table + filename
@@ -132,7 +153,7 @@ Archive: {}",
         if (filenum as u64 * 21 > (fsize - 12))
             || (dirsize as u64 + 8 * filenum as u64 > (fsize - 12))
         {
-            self.fail("Directory information larger than entire archive");
+            return Err(BsaError::DirSize);
         }
 
         // Read the offset info into a temporary buffer
@@ -150,10 +171,12 @@ Archive: {}",
         let string_vec = string_buf.split('\0').collect::<Vec<&str>>();
 
         // Check our position
-        assert_eq!(
-            file.seek(SeekFrom::Current(0)).unwrap(),
-            12 + dirsize as u64
-        );
+        if file.stream_position().unwrap() != 12 + dirsize as u64 {
+            return Err(BsaError::Position {
+                expected: 12 + dirsize,
+                actual: file.stream_position().unwrap(),
+            });
+        }
 
         // Calculate the offset of the data buffer. All file offsets are
         // relative to this. 12 header bytes + directory + hash table (skipped)
@@ -168,17 +191,22 @@ Archive: {}",
             };
 
             if fs.offset as u64 + fs.file_size as u64 > fsize {
-                self.fail("Archive contains offsets outside itself")
+                return Err(BsaError::OffsetOutside);
             }
             self.lookup.insert(fs.name.to_string(), i);
             self.files.push(fs);
         }
 
         self.is_loaded = true;
+
+        Ok(())
     }
 
-    pub fn create(&mut self, file: &str, filenames: &[String]) {
-        assert!(self.is_loaded == false, "BSA file already loaded");
+    /// Create a new BSA file, populating it with files from given file names
+    pub fn create(&mut self, file: &str, filenames: &[String]) -> Result<()> {
+        if self.is_loaded {
+            return Err(BsaError::AlreadyOpen);
+        }
         self.filename = file.to_string();
 
         // track bytes written
@@ -207,7 +235,7 @@ Archive: {}",
         let f = File::create(file).expect("Unable to create file");
         let mut f = BufWriter::new(f);
         // write magic header
-        bytes_written += f.write(BSAFile::MAGIC_HEADER).unwrap() as u32;
+        bytes_written += f.write(MAGIC_HEADER).unwrap() as u32;
         // write hashOffset
         // Offset of the hash table in the file, minus the header size (12)
         // calculate from 12*numfiles + length of each file name null-terminated
@@ -220,7 +248,7 @@ Archive: {}",
         bytes_written += f.write(&hash_offset.to_le_bytes()).unwrap() as u32;
         // write fileCount
         bytes_written += f.write(&filenum.to_le_bytes()).unwrap() as u32;
-        assert_eq!(bytes_written, 12);
+        check_bytes_written(12, bytes_written)?;
 
         // write sizes/offsets
         for file in &self.files {
@@ -239,7 +267,7 @@ Archive: {}",
             filename_length += 1; // null terminator
             starting_offset += filename_length;
         }
-        assert_eq!(bytes_written, 12 + 12 * filenum);
+        check_bytes_written(12 + 12 * filenum, bytes_written)?;
 
         // write filesnames
         let null_term = [b'\0'];
@@ -264,25 +292,20 @@ Archive: {}",
             let mut reader = BufReader::new(rfile);
             reader.read_to_end(&mut read_buf).unwrap();
 
-            assert_eq!(self.files.get(i).unwrap().file_size, read_buf.len() as u32);
+            check_bytes_written(read_buf.len() as u32, self.files.get(i).unwrap().file_size)?;
 
             // write out the file data to the archive
             f.write_all(&read_buf).unwrap();
         }
         f.flush().unwrap();
+        Ok(())
     }
 
     // Get the index of a given file name, or -1 if not found
-    fn get_index(&self, file: &str) -> i32 {
+    fn get_index(&self, file: &str) -> Result<u32> {
         match self.lookup.get(file) {
-            Some(&index) => index as i32,
-            _ => -1,
+            Some(&index) => Ok(index),
+            None => Err(BsaError::FileNotFound(file.to_string())),
         }
     }
-}
-
-pub struct FileStruct {
-    pub file_size: u32,
-    pub offset: u32,
-    pub name: String,
 }

@@ -1,14 +1,15 @@
-extern crate clap;
-extern crate indicatif;
-use clap::{Arg, Command};
-use indicatif::ProgressBar;
-
 use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-mod bsa;
+use anyhow::Result;
+use clap::{Arg, Command};
+use indicatif::ProgressBar;
+use tabled::builder::Builder;
+
+use bsatoollib as bsa;
+use tabled::settings::Style;
 
 struct Arguments {
     mode: String,
@@ -111,16 +112,30 @@ fn parse_options() -> Arguments {
 
 fn list(bsa: &bsa::BSAFile, info: &Arguments) {
     let files = bsa.get_list();
-    for file in files {
-        if info.longformat {
-            println!("{:50}{:8}@ 0x{:x}", file.name, file.file_size, file.offset)
-        } else {
+
+    if !info.longformat {
+        for file in files {
             println!("{}", file.name)
         }
+        return;
     }
+
+    // longformat
+    let mut builder = Builder::default();
+    builder.set_header(["name", "size", "offset"]);
+    for file in files {
+        builder.push_record([
+            file.name.to_string(),
+            file.file_size.to_string(),
+            format!("0x{:x}", file.offset),
+        ]);
+    }
+    let mut table = builder.build();
+    table.with(Style::modern());
+    println!("{}", table);
 }
 
-fn extract(bsa: &bsa::BSAFile, info: &Arguments) {
+fn extract(bsa: &bsa::BSAFile, info: &Arguments) -> Result<()> {
     let archive_path = &info.extractfile.replace('/', "\\");
     let extract_path = &info.extractfile.replace('\\', "/");
 
@@ -141,7 +156,7 @@ In archive: {}",
     }
 
     // Create the directory hierarchy
-    fs::create_dir_all(target.parent().unwrap()).unwrap();
+    fs::create_dir_all(target.parent().unwrap())?;
 
     if !target.parent().unwrap().is_dir() {
         panic!(
@@ -151,7 +166,7 @@ In archive: {}",
     }
 
     // Get a buffer for the file to extract
-    let data = bsa.get_file(archive_path);
+    let data = bsa.get_file(archive_path)?;
 
     // Write the file to disk
     println!(
@@ -161,11 +176,12 @@ In archive: {}",
     );
     let f = File::create(target).expect("Unable to create file");
     let mut f = BufWriter::new(f);
-    f.write_all(&data).unwrap();
-    f.flush().unwrap();
+    f.write_all(&data)?;
+    f.flush()?;
+    Ok(())
 }
 
-fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
+fn extractall(bsa: &bsa::BSAFile, info: &Arguments) -> Result<()> {
     // Get the list of files present in the archive
     let list = bsa.get_list();
     let pb = ProgressBar::new(list.len() as u64);
@@ -188,36 +204,38 @@ fn extractall(bsa: &bsa::BSAFile, info: &Arguments) {
         }
 
         // Get a buffer for the file to extract
-        let data = bsa.get_file(&file.name);
+        let data = bsa.get_file(&file.name)?;
 
         // Write the file to disk
         let f = File::create(target).expect("Unable to create file");
         let mut f = BufWriter::new(f);
-        f.write_all(&data).unwrap();
-        f.flush().unwrap();
+        f.write_all(&data)?;
+        f.flush()?;
     }
     pb.finish_with_message("done");
+    Ok(())
 }
 
-fn create(bsa: &mut bsa::BSAFile, info: &Arguments) {
-    bsa.create(&info.filename, &info.filenames);
+fn create(bsa: &mut bsa::BSAFile, info: &Arguments) -> Result<()> {
+    bsa.create(&info.filename, &info.filenames)?;
+    Ok(())
 }
 
 fn main() {
     let info = parse_options();
 
     // Open file
-    let mut bsa: bsa::BSAFile = bsa::BSAFile::new();
+    let mut bsa: bsa::BSAFile = bsa::BSAFile::default();
     if ["list", "extract", "extractall"].contains(&info.mode.as_str()) {
         // read header
-        bsa.open(info.filename.to_string());
+        bsa.open(info.filename.to_string()).unwrap();
     }
 
     match info.mode.as_str() {
         "list" => list(&bsa, &info),
-        "extract" => extract(&bsa, &info),
-        "extractall" => extractall(&bsa, &info),
-        "create" => create(&mut bsa, &info),
+        "extract" => extract(&bsa, &info).unwrap(),
+        "extractall" => extractall(&bsa, &info).unwrap(),
+        "create" => create(&mut bsa, &info).unwrap(),
         _ => println!("Unsupported mode. That is not supposed to happen."),
     }
 }

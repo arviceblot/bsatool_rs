@@ -1,0 +1,14 @@
+[package]
+name = "bsatoollib"
+version = "0.1.0"
+edition = "2021"
+authors = ["arviceblot <github@relay.arviceblot.com>"]
+license = "GPL-3.0"
+description = "A library for working with BSA files"
+homepage = "https://github.com/arviceblot/bsatool_rs"
+repository = "https://github.com/arviceblot/bsatool_rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = "1.0.40"

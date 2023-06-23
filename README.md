@@ -1,9 +1,11 @@
 # bsatool_rs
 
-[![](http://meritbadge.herokuapp.com/bsatool_rs)](https://crates.io/crates/bsatool_rs)
-[![Build Status](https://travis-ci.org/arviceblot/bsatool_rs.svg?branch=master)](https://travis-ci.org/arviceblot/bsatool_rs)
+[![crates.io cli](https://img.shields.io/crates/v/bsatool_rs.svg)](https://crates.io/crates/bsatool_rs)
+[![crates.io lib](https://img.shields.io/crates/v/bsatoollib.svg)](https://crates.io/crates/bsatoollib)
 
 A rust implementation of the openmw bsatool.
+
+> Note: Currently this project only supports BSA files compatible with TES III: Morrowind.
 
 ## Install
 
