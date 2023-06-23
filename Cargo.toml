@@ -16,6 +16,6 @@ categories = ["command-line-utilities"]
 [dependencies]
 clap = "3.1.18"
 indicatif = "0.16.0"
-bsatoollib = { path = "bsatoollib" }
+bsatoollib = { path = "bsatoollib", version = "0.1.0" }
 anyhow = "1.0.71"
 tabled = "0.12.2"
