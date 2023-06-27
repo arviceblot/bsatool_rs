@@ -11,38 +11,54 @@ A rust implementation of the openmw bsatool.
 
 The easiest way right now is to install with [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html):
 
-```
+```shell
 cargo install bsatool_rs
 ```
 
-or download the source code and compile it:
+### Library
 
+There is also a library option for manipulating BSAs from other rust code available on crates.io and can be added to a project with:
+
+```shell
+cargo add bsatoollib
 ```
-git clone git@github.com:arviceblot/bsatool_rs.git && cd bsatool_rs
-cargo build --release
+
+#### Example Usage
+
+```rust
+use bsatoollib as bsa;
+
+// open an existing BSA file
+let bsa = bsa::BSAFile::new("SomeFile.BSA").unwrap();
+
+// print all file names in the BSA
+for file in bsa.get_list().iter() {
+    println!(file.name);
+}
 ```
 
 ## Command line options
 
-    bsatool_rs
-    Inspect and extract files from Bethesda BSA archives
+```shell
+> bsatool_rs --help
+A tool for working with BSA files
 
-    USAGE:
-        bsatool_rs <INPUT> [SUBCOMMAND]
+Usage: bsatool_rs <FILE> <COMMAND>
 
-    FLAGS:
-        -h, --help       Prints help information
-        -V, --version    Prints version information
+Commands:
+  list         List the files presents in the given BSA file
+  extract      Extract a file from the given BSA file
+  extract-all  Extract all files from the given BSA file
+  create       Create a new BSA file with given files for archiving
+  help         Print this message or the help of the given subcommand(s)
 
-    ARGS:
-        <INPUT>    The input archive file to use
+Arguments:
+  <FILE>  BSA file to use
 
-    SUBCOMMANDS:
-        create        Create an archive file
-        extract       Extract a file from the input archive
-        extractall    Extract all files from the input archive
-        help          Prints this message or the help of the given subcommand(s)
-        list          List the files presents in the input archive
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+```
 
 ## Licensing
 
