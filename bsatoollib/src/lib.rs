@@ -1,4 +1,18 @@
 //! A simple library to using Bethesda BSA files.
+//!
+//! # Usage
+//!
+//! ```rust
+//! use bsatoollib as bsa;
+//!
+//! // open an existing BSA file
+//! let bsa = bsa::BSAFile::new("SomeFile.BSA").unwrap();
+//!
+//! // print all file names in the BSA
+//! for file in bsa.get_list().iter() {
+//!     println!(file.name);
+//! }
+//! ```
 #![warn(
     missing_docs,
     rust_2018_idioms,
@@ -49,8 +63,8 @@ fn calculate_hash(name: &str) -> u64 {
     (low as u64) | (high << 32)
 }
 
-fn check_bytes_written(expected: u32, actual: u32) -> Result<()> {
-    if expected != actual {
+fn check_bytes_written(expected: u32, actual: usize) -> Result<()> {
+    if expected != actual as u32 {
         return Err(BsaError::BytesWritten { expected, actual });
     }
     Ok(())
@@ -60,7 +74,7 @@ fn check_bytes_written(expected: u32, actual: u32) -> Result<()> {
 #[derive(Debug)]
 pub struct FileStruct {
     /// Expected size of the file in bytes
-    pub file_size: u32,
+    pub file_size: usize,
     /// Offset of the file in bytes from the start of the BSA
     pub offset: u32,
     /// Name of the file
@@ -69,16 +83,23 @@ pub struct FileStruct {
 
 /// Main struct for reading and manipulating BSAs
 #[derive(Debug, Default)]
-pub struct BSAFile {
+pub struct BSAFile<'a> {
     files: FileList,
     is_loaded: bool,
-    filename: String,
+    filename: &'a str,
     lookup: HashMap<String, u32>,
 }
 
-impl BSAFile {
+impl<'a> BSAFile<'a> {
+    /// Create a new BSAFile object and open a given file
+    pub fn new(file: &'a str) -> Result<Self> {
+        let mut obj = Self::default();
+        obj.open(file)?;
+        Ok(obj)
+    }
+
     /// Open a BSA file for reading
-    pub fn open(&mut self, file: String) -> Result<()> {
+    pub fn open(&mut self, file: &'a str) -> Result<()> {
         // clear out any existing file data
         self.filename = file;
         self.files.clear();
@@ -91,36 +112,50 @@ impl BSAFile {
 
     /// Check whether a given file name exists within the BSA
     pub fn exists(&self, file: &str) -> bool {
+        self.ensure_loaded().unwrap();
         self.get_index(file).is_ok()
     }
 
     /// Get the file bytes for a given file name within the BSA
     pub fn get_file(&self, file: &str) -> Result<Vec<u8>> {
-        let i = self.get_index(file).unwrap();
+        self.ensure_loaded()?;
+        let i = self.get_index(file)?;
         let fs = &self.files[i as usize];
 
-        let mut file = File::open(&self.filename).unwrap();
-        file.seek(SeekFrom::Start(fs.offset as u64)).unwrap();
-        let mut buf = vec![0u8; fs.file_size as usize];
-        file.read_exact(&mut buf).unwrap();
+        let mut file = File::open(self.filename)?;
+        file.seek(SeekFrom::Start(fs.offset as u64))?;
+        let mut buf = vec![0u8; fs.file_size];
+        file.read_exact(&mut buf)?;
         Ok(buf)
     }
 
     /// Get the data for files with the BSA
     pub fn get_list(&self) -> &FileList {
+        self.ensure_loaded().unwrap();
         &self.files
     }
 
-    fn read_header(&mut self) -> Result<()> {
+    fn ensure_loaded(&self) -> Result<()> {
+        if !self.is_loaded {
+            return Err(BsaError::NotOpen);
+        }
+        Ok(())
+    }
+
+    fn ensure_not_loaded(&self) -> Result<()> {
         if self.is_loaded {
             return Err(BsaError::AlreadyOpen);
         }
+        Ok(())
+    }
 
-        let mut file = File::open(&self.filename).unwrap();
+    fn read_header(&mut self) -> Result<()> {
+        self.ensure_not_loaded()?;
+        let mut file = File::open(self.filename)?;
 
         // Total archive size
-        let fsize = file.seek(SeekFrom::End(0)).unwrap();
-        file.seek(SeekFrom::Start(0)).unwrap();
+        let fsize = file.seek(SeekFrom::End(0))?;
+        file.seek(SeekFrom::Start(0))?;
         if fsize < 12 {
             return Err(BsaError::TooSmall(fsize));
         }
@@ -131,7 +166,7 @@ impl BSAFile {
         {
             // First 12 bytes
             let mut buff = [0u8; 4];
-            file.read_exact(&mut buff).unwrap();
+            file.read_exact(&mut buff)?;
 
             if buff[..4] != *MAGIC_HEADER {
                 return Err(BsaError::BadHeader);
@@ -139,11 +174,11 @@ impl BSAFile {
 
             // Total number of bytes used in size/offset-table + filename
             // sections. AKA hashOffset.
-            file.read_exact(&mut buff).unwrap();
+            file.read_exact(&mut buff)?;
             dirsize = u32::from_le_bytes(buff);
 
             // Number of files
-            file.read_exact(&mut buff).unwrap();
+            file.read_exact(&mut buff)?;
             filenum = u32::from_le_bytes(buff);
         }
 
@@ -160,21 +195,21 @@ impl BSAFile {
         let mut offsets: Vec<u32> = vec![0; 3 * filenum as usize];
         for i in 0..3 * filenum {
             let mut buff = [0u8; 4];
-            file.read_exact(&mut buff).unwrap();
+            file.read_exact(&mut buff)?;
             offsets[i as usize] = u32::from_le_bytes(buff);
         }
 
         // Read the string table
         let mut buff: Vec<u8> = vec![0; dirsize as usize - 12 * filenum as usize]; //dirsize as usize - 12 * filenum as usize];
-        file.read_exact(&mut buff).unwrap();
+        file.read_exact(&mut buff)?;
         let string_buf = String::from_utf8(buff).unwrap();
         let string_vec = string_buf.split('\0').collect::<Vec<&str>>();
 
         // Check our position
-        if file.stream_position().unwrap() != 12 + dirsize as u64 {
+        if file.stream_position()? != 12 + dirsize as u64 {
             return Err(BsaError::Position {
                 expected: 12 + dirsize,
-                actual: file.stream_position().unwrap(),
+                actual: file.stream_position()?,
             });
         }
 
@@ -185,7 +220,7 @@ impl BSAFile {
         // Set up the the FileStruct table
         for i in 0..filenum {
             let fs = FileStruct {
-                file_size: offsets[i as usize * 2],
+                file_size: offsets[i as usize * 2] as usize,
                 offset: offsets[i as usize * 2 + 1] + file_data_offset,
                 name: string_vec[i as usize].to_string(),
             };
@@ -203,25 +238,23 @@ impl BSAFile {
     }
 
     /// Create a new BSA file, populating it with files from given file names
-    pub fn create(&mut self, file: &str, filenames: &[String]) -> Result<()> {
-        if self.is_loaded {
-            return Err(BsaError::AlreadyOpen);
-        }
-        self.filename = file.to_string();
+    pub fn create(&mut self, file: &'a str, filenames: &[String]) -> Result<()> {
+        self.ensure_not_loaded()?;
+        self.filename = file;
 
         // track bytes written
-        let mut bytes_written: u32 = 0;
+        let mut bytes_written: usize = 0;
         // get file count
         let filenum = filenames.len() as u32;
         // get all file sizes
         let mut total_files_size: u32 = 0;
         for (i, filename) in filenames.iter().enumerate() {
             let archive_path = filename.to_ascii_lowercase().replace('/', "\\");
-            let metadata = fs::metadata(filename).unwrap();
+            let metadata = fs::metadata(filename)?;
             let fsize = metadata.len();
             // check size
             let fs = FileStruct {
-                file_size: fsize as u32,
+                file_size: fsize as usize,
                 name: archive_path,
                 offset: total_files_size,
             };
@@ -235,7 +268,7 @@ impl BSAFile {
         let f = File::create(file).expect("Unable to create file");
         let mut f = BufWriter::new(f);
         // write magic header
-        bytes_written += f.write(MAGIC_HEADER).unwrap() as u32;
+        bytes_written += f.write(MAGIC_HEADER)?;
         // write hashOffset
         // Offset of the hash table in the file, minus the header size (12)
         // calculate from 12*numfiles + length of each file name null-terminated
@@ -245,24 +278,24 @@ impl BSAFile {
         }
         // hash_offset -= 12;
         // hash_offset += 1;
-        bytes_written += f.write(&hash_offset.to_le_bytes()).unwrap() as u32;
+        bytes_written += f.write(&hash_offset.to_le_bytes())?;
         // write fileCount
-        bytes_written += f.write(&filenum.to_le_bytes()).unwrap() as u32;
+        bytes_written += f.write(&filenum.to_le_bytes())?;
         check_bytes_written(12, bytes_written)?;
 
         // write sizes/offsets
         for file in &self.files {
             // file size
-            bytes_written += f.write(&file.file_size.to_le_bytes()).unwrap() as u32;
+            bytes_written += f.write(&file.file_size.to_le_bytes())?;
             // offset of file in the data section
-            bytes_written += f.write(&file.offset.to_le_bytes()).unwrap() as u32;
+            bytes_written += f.write(&file.offset.to_le_bytes())?;
         }
 
         // write filename offsets
         let mut starting_offset: u32 = 0;
         for file in &self.files {
             // Relative offset of the filename in the records section
-            bytes_written += f.write(&starting_offset.to_le_bytes()).unwrap() as u32;
+            bytes_written += f.write(&starting_offset.to_le_bytes())?;
             let mut filename_length = file.name.chars().count() as u32;
             filename_length += 1; // null terminator
             starting_offset += filename_length;
@@ -272,15 +305,15 @@ impl BSAFile {
         // write filesnames
         let null_term = [b'\0'];
         for file in &self.files {
-            bytes_written += f.write(file.name.as_bytes()).unwrap() as u32;
-            bytes_written += f.write(&null_term).unwrap() as u32;
+            bytes_written += f.write(file.name.as_bytes())?;
+            bytes_written += f.write(&null_term)?;
         }
 
         // write hash table block
         for file in &self.files {
             let terminated = file.name.to_string() + "\0";
             let hash = calculate_hash(&terminated);
-            bytes_written += f.write(&hash.to_le_bytes()).unwrap() as u32;
+            bytes_written += f.write(&hash.to_le_bytes())?;
         }
 
         // write files
@@ -288,16 +321,16 @@ impl BSAFile {
             let mut read_buf: Vec<u8> = Vec::new();
 
             // read in the file data
-            let rfile = File::open(filename).unwrap();
+            let rfile = File::open(filename)?;
             let mut reader = BufReader::new(rfile);
-            reader.read_to_end(&mut read_buf).unwrap();
+            reader.read_to_end(&mut read_buf)?;
 
             check_bytes_written(read_buf.len() as u32, self.files.get(i).unwrap().file_size)?;
 
             // write out the file data to the archive
-            f.write_all(&read_buf).unwrap();
+            f.write_all(&read_buf)?;
         }
-        f.flush().unwrap();
+        f.flush()?;
         Ok(())
     }
 

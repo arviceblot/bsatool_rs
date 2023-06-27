@@ -5,6 +5,8 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 #[allow(missing_docs)]
 pub enum BsaError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
     #[error("BSA file must be open before reading")]
     NotOpen,
     #[error("BSA file is already open for reading")]
@@ -22,7 +24,7 @@ pub enum BsaError {
     #[error("Read file positions should be {expected} but was {actual}")]
     Position { expected: u32, actual: u64 },
     #[error("Expected to write {expected} bytes but was {actual}")]
-    BytesWritten { expected: u32, actual: u32 },
+    BytesWritten { expected: u32, actual: usize },
 }
 
 /// Result type using BsaErrors
