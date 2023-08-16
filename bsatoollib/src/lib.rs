@@ -192,12 +192,16 @@ impl<'a> BSAFile<'a> {
         }
 
         // Read the offset info into a temporary buffer
-        let mut offsets: Vec<u32> = vec![0; 3 * filenum as usize];
-        for i in 0..3 * filenum {
-            let mut buff = [0u8; 4];
-            file.read_exact(&mut buff)?;
-            offsets[i as usize] = u32::from_le_bytes(buff);
+        let mut offsets: Vec<u32> = Vec::with_capacity(filenum as usize);
+        let mut offsets_handle = file.take(12 * filenum as u64);
+        let mut offsets_buffer = Vec::new();
+        offsets_handle.read_to_end(&mut offsets_buffer)?;
+        let mut buff: [u8; 4];
+        for b in (0..12 * filenum as usize).step_by(4) {
+            buff = offsets_buffer[b..b + 4].try_into().unwrap();
+            offsets.push(u32::from_le_bytes(buff));
         }
+        let mut file = offsets_handle.get_ref();
 
         // Read the string table
         let mut buff: Vec<u8> = vec![0; dirsize as usize - 12 * filenum as usize]; //dirsize as usize - 12 * filenum as usize];
