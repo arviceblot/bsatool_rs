@@ -15,7 +15,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.3.8", features = ["derive"] }
-indicatif = "0.17.7"
+indicatif = "0.18.0"
 bsatoollib = { path = "bsatoollib", version = "0.2.1" }
 anyhow = "1.0.71"
 tabled = "0.14.0"
